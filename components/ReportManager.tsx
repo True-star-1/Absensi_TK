@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   Printer,
@@ -70,8 +69,6 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
       Swal.fire('Perhatian', 'Silakan pilih kelas terlebih dahulu.', 'warning');
       return;
     }
-    
-    // Pemicuan window.print() secara langsung untuk menghindari pemblokiran oleh browser modern
     window.print();
   };
 
@@ -197,7 +194,7 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
         </div>
       </div>
 
-      <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 overflow-visible print:shadow-none print:border-0 print:p-0 container-print">
+      <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 print:shadow-none print:border-0 print:p-0 container-print">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">LAPORAN ABSENSI DIGITAL SISWA TK</h2>
           <p className="text-slate-600 font-bold uppercase mt-1">KELAS: {selectedClass?.name || '-'}</p>
@@ -210,20 +207,20 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
           <table className="w-full border-collapse">
             <thead className="bg-slate-50">
               <tr>
-                <th className="border-2 border-slate-200 px-4 py-3 text-center font-black text-slate-700 text-xs uppercase">No</th>
-                <th className="border-2 border-slate-200 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">NIS</th>
-                <th className="border-2 border-slate-200 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">Nama Siswa</th>
-                <th className="border-2 border-slate-200 px-4 py-3 text-center font-black text-slate-700 text-xs uppercase">Status</th>
-                <th className="border-2 border-slate-200 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">Keterangan</th>
+                <th className="border-2 border-slate-300 px-4 py-3 text-center font-black text-slate-700 text-xs uppercase">No</th>
+                <th className="border-2 border-slate-300 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">NIS</th>
+                <th className="border-2 border-slate-300 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">Nama Siswa</th>
+                <th className="border-2 border-slate-300 px-4 py-3 text-center font-black text-slate-700 text-xs uppercase">Status</th>
+                <th className="border-2 border-slate-300 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">Keterangan</th>
               </tr>
             </thead>
             <tbody>
               {reportData.map((row: any, idx) => (
                 <tr key={row.id}>
-                  <td className="border-2 border-slate-100 px-4 py-3 text-center text-slate-600 font-bold">{idx + 1}</td>
-                  <td className="border-2 border-slate-100 px-4 py-3 text-slate-500 font-medium">{row.nis}</td>
-                  <td className="border-2 border-slate-100 px-4 py-3 font-black text-slate-800">{row.name}</td>
-                  <td className="border-2 border-slate-100 px-4 py-3 text-center">
+                  <td className="border-2 border-slate-200 px-4 py-3 text-center text-slate-600 font-bold">{idx + 1}</td>
+                  <td className="border-2 border-slate-200 px-4 py-3 text-slate-500 font-medium">{row.nis}</td>
+                  <td className="border-2 border-slate-200 px-4 py-3 font-black text-slate-800">{row.name}</td>
+                  <td className="border-2 border-slate-200 px-4 py-3 text-center">
                     <span className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${
                       String(row.status).toLowerCase().trim() === 'hadir' ? 'bg-emerald-100 text-emerald-700' : 
                       String(row.status).toLowerCase().trim() === 'izin' ? 'bg-amber-100 text-amber-700' : 
@@ -233,7 +230,7 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
                       {row.status}
                     </span>
                   </td>
-                  <td className="border-2 border-slate-100 px-4 py-3 text-sm italic text-slate-500">{row.note || '-'}</td>
+                  <td className="border-2 border-slate-200 px-4 py-3 text-sm italic text-slate-500">{row.note || '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -288,8 +285,8 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
               <p>Kepala Sekolah TK</p>
             </div>
             <div className="text-sm font-bold text-slate-800 space-y-1">
-              <p className="mt-2">{selectedClass?.headmasterName || '........................................'}</p>
-              <p>Nip. ........................................</p>
+              <p className="mt-2 uppercase underline">{selectedClass?.headmasterName || '........................................'}</p>
+              <p>NIP. {selectedClass?.headmasterNip || '-'}</p>
             </div>
           </div>
           <div className="flex flex-col items-center">
@@ -298,8 +295,8 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
               <p>Guru Kelas {selectedClass?.name || '-'}</p>
             </div>
             <div className="text-sm font-bold text-slate-800 space-y-1">
-              <p className="mt-2">{selectedClass?.teacherName || '........................................'}</p>
-              <p>Nip. ........................................</p>
+              <p className="mt-2 uppercase underline">{selectedClass?.teacherName || '........................................'}</p>
+              <p>NIP. {selectedClass?.teacherNip || '-'}</p>
             </div>
           </div>
         </div>

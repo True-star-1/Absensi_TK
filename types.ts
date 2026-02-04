@@ -10,7 +10,9 @@ export interface ClassRoom {
   id: string;
   name: string;
   teacherName?: string;
+  teacherNip?: string;
   headmasterName?: string;
+  headmasterNip?: string;
 }
 
 export interface Student {

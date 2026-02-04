@@ -9,7 +9,9 @@ import { createClient } from '@supabase/supabase-js';
 
   -- Tambahkan kolom baru ke tabel yang sudah ada
   ALTER TABLE classes ADD COLUMN IF NOT EXISTS "teacherName" TEXT;
+  ALTER TABLE classes ADD COLUMN IF NOT EXISTS "teacherNip" TEXT;
   ALTER TABLE classes ADD COLUMN IF NOT EXISTS "headmasterName" TEXT;
+  ALTER TABLE classes ADD COLUMN IF NOT EXISTS "headmasterNip" TEXT;
 
   -- Nonaktifkan RLS agar aplikasi bisa akses data
   ALTER TABLE classes DISABLE ROW LEVEL SECURITY;

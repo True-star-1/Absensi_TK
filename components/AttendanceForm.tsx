@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Save, School } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -85,16 +84,19 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({ classes, students, atte
       return;
     }
 
+    // Validasi ketat: Keterangan Wajib jika Izin atau Sakit
     const invalidStudents = filteredStudents.filter(s => {
       const sess = currentSession[s.id];
-      return isNoteRequired(sess.status) && (!sess.note || sess.note.trim() === '');
+      const statusStr = String(sess.status).toLowerCase().trim();
+      const needsNote = statusStr === 'sakit' || statusStr === 'izin';
+      return needsNote && (!sess.note || sess.note.trim() === '');
     });
 
     if (invalidStudents.length > 0) {
       Swal.fire({
         icon: 'error',
-        title: 'Keterangan Kosong',
-        text: 'Status Sakit atau Izin wajib diisi alasannya.',
+        title: 'Keterangan Wajib Diisi',
+        text: 'Alasan Sakit atau Izin tidak boleh kosong untuk keperluan laporan.',
         confirmButtonColor: '#4f46e5'
       });
       return;

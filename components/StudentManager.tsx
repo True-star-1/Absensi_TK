@@ -182,7 +182,7 @@ const StudentManager: React.FC<StudentManagerProps> = ({ students, setStudents, 
                   </td>
                   <td className="px-6 py-5 font-mono text-sm font-bold text-slate-500">{s.nis}</td>
                   <td className="px-6 py-5">
-                    <span className="px-3 py-1 bg-white border border-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-sm">
+                    <span className="inline-block whitespace-nowrap px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">
                       {classes.find(c => c.id === s.classId)?.name || 'N/A'}
                     </span>
                   </td>

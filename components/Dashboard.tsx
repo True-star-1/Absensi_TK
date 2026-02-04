@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { 
   Users, 
@@ -35,6 +34,9 @@ ChartJS.register(
   ArcElement
 );
 
+// Set default font for all charts to match the UI (Quicksand)
+ChartJS.defaults.font.family = "'Quicksand', sans-serif";
+
 interface DashboardProps {
   students: Student[];
   classes: ClassRoom[];
@@ -45,12 +47,21 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   
+  // Mengurutkan kelas secara alfabetis (TK A sebelum TK B)
+  const sortedClasses = useMemo(() => {
+    return [...classes].sort((a, b) => a.name.localeCompare(b.name));
+  }, [classes]);
+
   const stats = useMemo(() => {
     const totalStudents = students.length;
     
+    // Fungsi hitung yang lebih robust untuk menangani perbedaan kapitalisasi dari database
     const getCount = (recs: AttendanceRecord[], status: string) => {
       const target = status.toLowerCase().trim();
-      return recs.filter(a => a.status && String(a.status).toLowerCase().trim() === target).length;
+      return recs.filter(a => {
+        if (!a.status) return false;
+        return String(a.status).toLowerCase().trim() === target;
+      }).length;
     };
 
     const todayRecs = attendance.filter(a => a.date === todayStr);
@@ -72,8 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
     const dailyRate = todayRecs.length > 0 ? Math.round((hadirToday / todayRecs.length) * 100) : 0;
     const monthlyRate = totalMonthRecords > 0 ? Math.round((hadirMonth / totalMonthRecords) * 100) : 0;
 
-    // Hitung jumlah siswa per kelas untuk breakdown
-    const classBreakdown = classes.map(c => ({
+    const classBreakdown = sortedClasses.map(c => ({
       name: c.name,
       count: students.filter(s => s.classId === c.id).length
     }));
@@ -84,9 +94,8 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
       today: { hadir: hadirToday, sakit: sakitToday, izin: izinToday, alpha: alphaToday, rate: dailyRate },
       monthly: { rate: monthlyRate, count: totalMonthRecords }
     };
-  }, [students, classes, attendance, todayStr]);
+  }, [students, sortedClasses, attendance, todayStr]);
 
-  // Logika Grafik Lingkaran: Tampilkan placeholder jika semua data 0
   const isTodayEmpty = stats.today.hadir === 0 && stats.today.sakit === 0 && stats.today.izin === 0 && stats.today.alpha === 0;
 
   const pieData = {
@@ -102,11 +111,11 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
   };
 
   const classData = {
-    labels: classes.map(c => c.name),
+    labels: sortedClasses.map(c => c.name),
     datasets: [
       {
         label: 'Jumlah Siswa',
-        data: classes.map(c => students.filter(s => s.classId === c.id).length),
+        data: sortedClasses.map(c => students.filter(s => s.classId === c.id).length),
         backgroundColor: 'rgba(99, 102, 241, 0.8)',
         borderRadius: 12,
         hoverBackgroundColor: '#6366f1'
@@ -128,64 +137,66 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-1 bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-[32px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
-          <CalendarDays className="absolute -right-4 -bottom-4 w-32 h-32 opacity-10" />
+        <div className="lg:col-span-1 bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[32px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+          <CalendarDays className="absolute -right-4 -bottom-4 w-40 h-40 opacity-10" />
           <div className="relative z-10">
-            <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-1">Rata-rata Bulan Ini</p>
-            <h2 className="text-5xl font-black mb-4">{stats.monthly.rate}%</h2>
-            <div className="w-full bg-white/20 h-2 rounded-full mb-3">
+            <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-2">Rata-rata Bulan Ini</p>
+            <h2 className="text-6xl font-black mb-6">{stats.monthly.rate}%</h2>
+            <div className="w-full bg-white/20 h-3 rounded-full mb-4">
               <div className="bg-white h-full rounded-full transition-all duration-1000" style={{ width: `${stats.monthly.rate}%` }}></div>
             </div>
-            <p className="text-[10px] font-bold opacity-70 italic">Dihitung dari total {stats.monthly.count} data absen bulan ini</p>
+            <p className="text-[11px] font-bold opacity-70 italic tracking-wide">Dihitung dari total {stats.monthly.count} data absen bulan ini</p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-center">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-emerald-50 p-2 rounded-xl text-emerald-500"><TrendingUp size={20} /></div>
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-center">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-emerald-50 p-2.5 rounded-xl text-emerald-500"><TrendingUp size={22} /></div>
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Kehadiran Hari Ini</p>
           </div>
-          <h2 className="text-4xl font-black text-slate-900">{stats.today.rate}%</h2>
-          <p className="text-[10px] text-slate-400 font-bold mt-1">Status: {stats.today.rate >= 90 ? 'Sangat Baik' : 'Perlu Perhatian'}</p>
+          <h2 className="text-5xl font-black text-slate-900">{stats.today.rate}%</h2>
+          <div className="mt-3 flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${stats.today.rate >= 90 ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+            <p className="text-[11px] text-slate-400 font-black uppercase tracking-tight">Status: {stats.today.rate >= 90 ? 'Sangat Baik' : 'Perlu Perhatian'}</p>
+          </div>
         </div>
 
-        <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-center">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-blue-50 p-2 rounded-xl text-blue-500"><Users size={20} /></div>
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-center">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-blue-50 p-2.5 rounded-xl text-blue-500"><Users size={22} /></div>
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Anak Didik</p>
           </div>
-          <h2 className="text-5xl font-black text-slate-900 leading-tight">{stats.total}</h2>
+          <h2 className="text-6xl font-black text-slate-900 leading-tight tracking-tighter">{stats.total}</h2>
           
-          {/* Breakdown Per Kelas - Diperbesar */}
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2.5 mt-4">
             {stats.classBreakdown.map(cb => (
-              <div key={cb.name} className="bg-blue-50/50 border border-blue-100 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
-                <span className="text-xs font-black text-slate-500 uppercase tracking-tight">{cb.name}</span>
-                <span className="text-lg font-black text-blue-600 leading-none">{cb.count}</span>
+              <div key={cb.name} className="bg-blue-50/80 border border-blue-100 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm hover:scale-105 transition-transform">
+                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{cb.name}</span>
+                <span className="text-xl font-black text-blue-600 leading-none">{cb.count}</span>
               </div>
             ))}
           </div>
           
-          <p className="text-xs text-slate-400 font-bold mt-3">Terdaftar di database</p>
+          <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mt-4">Terdaftar di database</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <StatDetail icon={<CheckCircle size={18} />} label="Hadir" value={stats.today.hadir} color="emerald" />
-        <StatDetail icon={<Activity size={18} />} label="Sakit" value={stats.today.sakit} color="blue" />
-        <StatDetail icon={<HelpCircle size={18} />} label="Izin" value={stats.today.izin} color="amber" />
-        <StatDetail icon={<UserX size={18} />} label="Alpha" value={stats.today.alpha} color="red" />
+        <StatDetail icon={<CheckCircle size={20} />} label="Hadir" value={stats.today.hadir} color="emerald" />
+        <StatDetail icon={<Activity size={20} />} label="Sakit" value={stats.today.sakit} color="blue" />
+        <StatDetail icon={<HelpCircle size={20} />} label="Izin" value={stats.today.izin} color="amber" />
+        <StatDetail icon={<UserX size={20} />} label="Alpha" value={stats.today.alpha} color="red" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Sparkles size={20} className="text-indigo-500" /> Distribusi Kehadiran
+            <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
+              <Sparkles size={24} className="text-indigo-500" /> Distribusi Kehadiran
             </h3>
-            <span className="text-xs font-black text-slate-400 uppercase">Harian</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kategori Hari Ini</span>
           </div>
-          <div className="max-w-[280px] mx-auto">
+          <div className="max-w-[300px] mx-auto py-4">
             <Pie 
               data={pieData} 
               options={{ 
@@ -193,20 +204,26 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
                   legend: { 
                     display: !isTodayEmpty,
                     position: 'bottom', 
-                    labels: { usePointStyle: true, font: { weight: 'bold', size: 11 } } 
+                    labels: { 
+                      usePointStyle: true, 
+                      padding: 20,
+                      font: { weight: 'bold', size: 12, family: "'Quicksand', sans-serif" } 
+                    } 
                   },
                   tooltip: {
-                    enabled: !isTodayEmpty
+                    enabled: !isTodayEmpty,
+                    titleFont: { weight: 'bold', family: "'Quicksand', sans-serif" },
+                    bodyFont: { family: "'Quicksand', sans-serif" }
                   }
                 } 
               }} 
             />
             {isTodayEmpty && (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-300">
-                <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-3">
-                  <Activity size={32} />
+              <div className="py-16 flex flex-col items-center justify-center text-slate-300">
+                <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center mb-4 border border-slate-100 border-dashed">
+                  <Activity size={40} />
                 </div>
-                <p className="text-center text-xs font-bold italic">Belum ada data absensi hari ini</p>
+                <p className="text-center text-xs font-black uppercase tracking-widest italic">Belum ada data absensi</p>
               </div>
             )}
           </div>
@@ -214,19 +231,37 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
 
         <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <BarChart3 size={20} className="text-indigo-500" /> Siswa Per Kelas
+            <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
+              <BarChart3 size={24} className="text-indigo-500" /> Siswa Per Kelas
             </h3>
-            <span className="text-xs font-black text-slate-400 uppercase">Data Master</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Perbandingan Antar Kelas</span>
           </div>
-          <Bar 
-            data={classData} 
-            options={{ 
-              responsive: true, 
-              plugins: { legend: { display: false } }, 
-              scales: { y: { beginAtZero: true, grid: { display: false }, ticks: { precision: 0 } }, x: { grid: { display: false } } } 
-            }} 
-          />
+          <div className="py-4">
+            <Bar 
+              data={classData} 
+              options={{ 
+                responsive: true, 
+                plugins: { 
+                  legend: { display: false },
+                  tooltip: {
+                    titleFont: { weight: 'bold', family: "'Quicksand', sans-serif" },
+                    bodyFont: { family: "'Quicksand', sans-serif" }
+                  }
+                }, 
+                scales: { 
+                  y: { 
+                    beginAtZero: true, 
+                    grid: { display: false }, 
+                    ticks: { precision: 0, font: { weight: 'bold', family: "'Quicksand', sans-serif" } } 
+                  }, 
+                  x: { 
+                    grid: { display: false },
+                    ticks: { font: { weight: 'bold', family: "'Quicksand', sans-serif" } }
+                  } 
+                } 
+              }} 
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -241,11 +276,11 @@ const StatDetail: React.FC<{ icon: React.ReactNode, label: string, value: number
     red: 'bg-red-50 text-red-600'
   };
   return (
-    <div className="bg-white p-4 rounded-2xl border border-slate-50 shadow-sm flex items-center gap-4 transition-transform hover:scale-105">
-      <div className={`${styles[color]} p-2.5 rounded-xl`}>{icon}</div>
+    <div className="bg-white p-5 rounded-2xl border border-slate-50 shadow-sm flex items-center gap-5 transition-transform hover:scale-105 cursor-default">
+      <div className={`${styles[color]} p-3 rounded-2xl`}>{icon}</div>
       <div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{label}</p>
-        <h4 className="text-xl font-black text-slate-800 leading-none">{value}</h4>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+        <h4 className="text-2xl font-black text-slate-800 leading-none tracking-tight">{value}</h4>
       </div>
     </div>
   );

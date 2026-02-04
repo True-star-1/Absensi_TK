@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, Save, X, School, User, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, School, User, ShieldCheck, Hash } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { ClassRoom } from '../types';
 import { supabase } from '../lib/supabase';
@@ -14,12 +14,16 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
+  const [newTeacherNip, setNewTeacherNip] = useState('');
   const [newHeadmasterName, setNewHeadmasterName] = useState('');
+  const [newHeadmasterNip, setNewHeadmasterNip] = useState('');
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editTeacherName, setEditTeacherName] = useState('');
+  const [editTeacherNip, setEditTeacherNip] = useState('');
   const [editHeadmasterName, setEditHeadmasterName] = useState('');
+  const [editHeadmasterNip, setEditHeadmasterNip] = useState('');
   
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -30,7 +34,9 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
       const newClass: Omit<ClassRoom, 'id'> = {
         name: newClassName,
         teacherName: newTeacherName,
-        headmasterName: newHeadmasterName
+        teacherNip: newTeacherNip,
+        headmasterName: newHeadmasterName,
+        headmasterNip: newHeadmasterNip
       };
       
       const { data, error } = await supabase
@@ -44,7 +50,9 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
         setClasses([...classes, data[0]]);
         setNewClassName('');
         setNewTeacherName('');
+        setNewTeacherNip('');
         setNewHeadmasterName('');
+        setNewHeadmasterNip('');
         setIsAdding(false);
         Swal.fire({
           icon: 'success',
@@ -95,7 +103,9 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
     setEditingId(c.id);
     setEditName(c.name);
     setEditTeacherName(c.teacherName || '');
+    setEditTeacherNip(c.teacherNip || '');
     setEditHeadmasterName(c.headmasterName || '');
+    setEditHeadmasterNip(c.headmasterNip || '');
   };
 
   const handleSaveEdit = async () => {
@@ -107,7 +117,9 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
         .update({ 
           name: editName,
           teacherName: editTeacherName,
-          headmasterName: editHeadmasterName
+          teacherNip: editTeacherNip,
+          headmasterName: editHeadmasterName,
+          headmasterNip: editHeadmasterNip
         })
         .eq('id', editingId);
 
@@ -117,7 +129,9 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
         ...c, 
         name: editName, 
         teacherName: editTeacherName,
-        headmasterName: editHeadmasterName
+        teacherNip: editTeacherNip,
+        headmasterName: editHeadmasterName,
+        headmasterNip: editHeadmasterNip
       } : c));
       setEditingId(null);
       Swal.fire({
@@ -135,7 +149,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Data Kelas</h1>
@@ -152,11 +166,11 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {isAdding && (
-          <div className="bg-white p-6 rounded-3xl border-2 border-dashed border-blue-200 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+          <div className="bg-white p-6 rounded-3xl border-2 border-dashed border-blue-200 flex flex-col gap-4 animate-in zoom-in-95 duration-200 shadow-xl">
             <h3 className="font-bold text-blue-600 flex items-center gap-2">
               <Plus size={18} /> Tambah Kelas Baru
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Nama Kelas</label>
                 <input 
@@ -168,28 +182,52 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
                   disabled={isProcessing}
                 />
               </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Nama Guru Kelas</label>
-                <input 
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  placeholder="Nama Lengkap Guru"
-                  value={newTeacherName}
-                  onChange={(e) => setNewTeacherName(e.target.value)}
-                  disabled={isProcessing}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Guru Kelas</label>
+                  <input 
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    placeholder="Nama Lengkap"
+                    value={newTeacherName}
+                    onChange={(e) => setNewTeacherName(e.target.value)}
+                    disabled={isProcessing}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">NIP Guru</label>
+                  <input 
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    placeholder="Kosongkan jika -"
+                    value={newTeacherNip}
+                    onChange={(e) => setNewTeacherNip(e.target.value)}
+                    disabled={isProcessing}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Nama Kepala Sekolah</label>
-                <input 
-                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  placeholder="Nama Lengkap Kepala Sekolah"
-                  value={newHeadmasterName}
-                  onChange={(e) => setNewHeadmasterName(e.target.value)}
-                  disabled={isProcessing}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Kepala Sekolah</label>
+                  <input 
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    placeholder="Nama Lengkap"
+                    value={newHeadmasterName}
+                    onChange={(e) => setNewHeadmasterName(e.target.value)}
+                    disabled={isProcessing}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">NIP Kepsek</label>
+                  <input 
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    placeholder="Kosongkan jika -"
+                    value={newHeadmasterNip}
+                    onChange={(e) => setNewHeadmasterNip(e.target.value)}
+                    disabled={isProcessing}
+                  />
+                </div>
               </div>
             </div>
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-4">
               <button 
                 onClick={handleAdd} 
                 className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"
@@ -227,7 +265,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
                   ) : (
                     <h3 className="font-bold text-xl text-slate-800 truncate">{c.name}</h3>
                   )}
-                  <p className="text-xs text-slate-400 font-medium tracking-wide truncate">ID: {c.id.toString().substring(0, 8)}</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest truncate">ID KELAS: {c.id.toString().substring(0, 8)}</p>
                 </div>
               </div>
               
@@ -242,38 +280,40 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, setClasses }) => {
             </div>
 
             <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="text-slate-400 shrink-0"><User size={16} /></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Guru Kelas</p>
-                  {editingId === c.id ? (
-                    <input 
-                      className="w-full p-1 border-b border-blue-200 focus:outline-none bg-transparent text-sm font-bold text-slate-700"
-                      value={editTeacherName}
-                      onChange={(e) => setEditTeacherName(e.target.value)}
-                      placeholder="Masukkan nama guru"
-                      disabled={isProcessing}
-                    />
-                  ) : (
-                    <p className="text-sm font-bold text-slate-700 truncate">{c.teacherName || '-'}</p>
-                  )}
+              <div className="grid grid-cols-1 gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="text-slate-400 mt-1 shrink-0"><User size={16} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">GURU KELAS</p>
+                    {editingId === c.id ? (
+                      <div className="space-y-2 mt-1">
+                        <input className="w-full p-1 border-b border-blue-200 focus:outline-none bg-white text-sm font-bold text-slate-700" value={editTeacherName} onChange={(e) => setEditTeacherName(e.target.value)} placeholder="Nama Guru" disabled={isProcessing} />
+                        <input className="w-full p-1 border-b border-blue-200 focus:outline-none bg-white text-xs font-medium text-slate-500" value={editTeacherNip} onChange={(e) => setEditTeacherNip(e.target.value)} placeholder="NIP Guru" disabled={isProcessing} />
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-bold text-slate-700 truncate">{c.teacherName || '-'}</p>
+                        <p className="text-xs font-medium text-slate-400">NIP. {c.teacherNip || '-'}</p>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-slate-400 shrink-0"><ShieldCheck size={16} /></div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Kepala Sekolah</p>
-                  {editingId === c.id ? (
-                    <input 
-                      className="w-full p-1 border-b border-blue-200 focus:outline-none bg-transparent text-sm font-bold text-slate-700"
-                      value={editHeadmasterName}
-                      onChange={(e) => setEditHeadmasterName(e.target.value)}
-                      placeholder="Masukkan nama kepala sekolah"
-                      disabled={isProcessing}
-                    />
-                  ) : (
-                    <p className="text-sm font-bold text-slate-700 truncate">{c.headmasterName || '-'}</p>
-                  )}
+                <div className="flex items-start gap-3">
+                  <div className="text-slate-400 mt-1 shrink-0"><ShieldCheck size={16} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">KEPALA SEKOLAH</p>
+                    {editingId === c.id ? (
+                      <div className="space-y-2 mt-1">
+                        <input className="w-full p-1 border-b border-blue-200 focus:outline-none bg-white text-sm font-bold text-slate-700" value={editHeadmasterName} onChange={(e) => setEditHeadmasterName(e.target.value)} placeholder="Nama Kepsek" disabled={isProcessing} />
+                        <input className="w-full p-1 border-b border-blue-200 focus:outline-none bg-white text-xs font-medium text-slate-500" value={editHeadmasterNip} onChange={(e) => setEditHeadmasterNip(e.target.value)} placeholder="NIP Kepsek" disabled={isProcessing} />
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-bold text-slate-700 truncate">{c.headmasterName || '-'}</p>
+                        <p className="text-xs font-medium text-slate-400">NIP. {c.headmasterNip || '-'}</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

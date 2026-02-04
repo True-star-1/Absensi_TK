@@ -1,7 +1,5 @@
 {
   "name": "Absensi Kita TK - Digital Attendance",
-  "description": "A modern, playful, and responsive digital attendance application specifically designed for Kindergarten students, featuring CRUD for classes/students, daily/monthly reports, and AI-powered insights.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "description": "A modern, playful, and responsive digital attendance application specifically designed for Kindergarten students.",
+  "requestFramePermissions": []
 }

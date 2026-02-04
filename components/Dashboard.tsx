@@ -48,20 +48,17 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
   const stats = useMemo(() => {
     const totalStudents = students.length;
     
-    // Helper untuk hitung status (Case-Insensitive)
     const getCount = (recs: AttendanceRecord[], status: string) => {
       const target = status.toLowerCase().trim();
       return recs.filter(a => a.status && String(a.status).toLowerCase().trim() === target).length;
     };
 
-    // Statistik Harian
     const todayRecs = attendance.filter(a => a.date === todayStr);
     const hadirToday = getCount(todayRecs, 'Hadir');
     const sakitToday = getCount(todayRecs, 'Sakit');
     const izinToday = getCount(todayRecs, 'Izin');
     const alphaToday = getCount(todayRecs, 'Alpha');
     
-    // Statistik Bulanan (Bulan Berjalan)
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     const monthRecs = attendance.filter(a => {
@@ -72,25 +69,34 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
     const hadirMonth = getCount(monthRecs, 'Hadir');
     const totalMonthRecords = monthRecs.length;
     
-    // Persentase
     const dailyRate = todayRecs.length > 0 ? Math.round((hadirToday / todayRecs.length) * 100) : 0;
     const monthlyRate = totalMonthRecords > 0 ? Math.round((hadirMonth / totalMonthRecords) * 100) : 0;
 
+    // Hitung jumlah siswa per kelas untuk breakdown
+    const classBreakdown = classes.map(c => ({
+      name: c.name,
+      count: students.filter(s => s.classId === c.id).length
+    }));
+
     return {
       total: totalStudents,
+      classBreakdown,
       today: { hadir: hadirToday, sakit: sakitToday, izin: izinToday, alpha: alphaToday, rate: dailyRate },
       monthly: { rate: monthlyRate, count: totalMonthRecords }
     };
-  }, [students, attendance, todayStr]);
+  }, [students, classes, attendance, todayStr]);
+
+  // Logika Grafik Lingkaran: Tampilkan placeholder jika semua data 0
+  const isTodayEmpty = stats.today.hadir === 0 && stats.today.sakit === 0 && stats.today.izin === 0 && stats.today.alpha === 0;
 
   const pieData = {
-    labels: ['Hadir', 'Sakit', 'Izin', 'Alpha'],
+    labels: isTodayEmpty ? ['Belum Ada Data'] : ['Hadir', 'Sakit', 'Izin', 'Alpha'],
     datasets: [
       {
-        data: [stats.today.hadir, stats.today.sakit, stats.today.izin, stats.today.alpha],
-        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+        data: isTodayEmpty ? [1] : [stats.today.hadir, stats.today.sakit, stats.today.izin, stats.today.alpha],
+        backgroundColor: isTodayEmpty ? ['#f1f5f9'] : ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
         borderWidth: 0,
-        hoverOffset: 15
+        hoverOffset: isTodayEmpty ? 0 : 15
       },
     ],
   };
@@ -121,9 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
         </div>
       </div>
 
-      {/* Baris Utama Statistik */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {/* Persentase Bulanan - Lebih Besar */}
         <div className="lg:col-span-1 bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-[32px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
           <CalendarDays className="absolute -right-4 -bottom-4 w-32 h-32 opacity-10" />
           <div className="relative z-10">
@@ -136,7 +140,6 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
           </div>
         </div>
 
-        {/* Persentase Harian */}
         <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-center">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-emerald-50 p-2 rounded-xl text-emerald-500"><TrendingUp size={20} /></div>
@@ -146,18 +149,27 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
           <p className="text-[10px] text-slate-400 font-bold mt-1">Status: {stats.today.rate >= 90 ? 'Sangat Baik' : 'Perlu Perhatian'}</p>
         </div>
 
-        {/* Total Siswa */}
         <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col justify-center">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-blue-50 p-2 rounded-xl text-blue-500"><Users size={20} /></div>
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Anak Didik</p>
           </div>
-          <h2 className="text-4xl font-black text-slate-900">{stats.total}</h2>
-          <p className="text-[10px] text-slate-400 font-bold mt-1">Terdaftar di database</p>
+          <h2 className="text-5xl font-black text-slate-900 leading-tight">{stats.total}</h2>
+          
+          {/* Breakdown Per Kelas - Diperbesar */}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {stats.classBreakdown.map(cb => (
+              <div key={cb.name} className="bg-blue-50/50 border border-blue-100 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+                <span className="text-xs font-black text-slate-500 uppercase tracking-tight">{cb.name}</span>
+                <span className="text-lg font-black text-blue-600 leading-none">{cb.count}</span>
+              </div>
+            ))}
+          </div>
+          
+          <p className="text-xs text-slate-400 font-bold mt-3">Terdaftar di database</p>
         </div>
       </div>
 
-      {/* Rincian Status Hari Ini */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatDetail icon={<CheckCircle size={18} />} label="Hadir" value={stats.today.hadir} color="emerald" />
         <StatDetail icon={<Activity size={18} />} label="Sakit" value={stats.today.sakit} color="blue" />
@@ -165,7 +177,6 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
         <StatDetail icon={<UserX size={18} />} label="Alpha" value={stats.today.alpha} color="red" />
       </div>
 
-      {/* Grafik */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-8">
@@ -175,7 +186,29 @@ const Dashboard: React.FC<DashboardProps> = ({ students, classes, attendance }) 
             <span className="text-xs font-black text-slate-400 uppercase">Harian</span>
           </div>
           <div className="max-w-[280px] mx-auto">
-            <Pie data={pieData} options={{ plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: 'bold', size: 11 } } } } }} />
+            <Pie 
+              data={pieData} 
+              options={{ 
+                plugins: { 
+                  legend: { 
+                    display: !isTodayEmpty,
+                    position: 'bottom', 
+                    labels: { usePointStyle: true, font: { weight: 'bold', size: 11 } } 
+                  },
+                  tooltip: {
+                    enabled: !isTodayEmpty
+                  }
+                } 
+              }} 
+            />
+            {isTodayEmpty && (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-300">
+                <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+                  <Activity size={32} />
+                </div>
+                <p className="text-center text-xs font-bold italic">Belum ada data absensi hari ini</p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,13 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  Printer, 
-  FileSpreadsheet, 
-  Sparkles,
-  ChevronRight,
-  ChevronLeft
+  Printer,
+  FileSpreadsheet,
+  FileText,
+  Download
 } from 'lucide-react';
 import { Student, ClassRoom, AttendanceRecord } from '../types';
+import Swal from 'sweetalert2';
 
 interface ReportManagerProps {
   classes: ClassRoom[];
@@ -16,8 +16,6 @@ interface ReportManagerProps {
 }
 
 const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attendance }) => {
-  // Define 'now' to be used for date formatting in the report footer
-  const now = new Date();
   const [reportType, setReportType] = useState<'daily' | 'monthly'>('monthly');
   const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || '');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -26,12 +24,11 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
 
   const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
+  const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
   const daysInMonth = useMemo(() => new Date(selectedYear, selectedMonth, 0).getDate(), [selectedMonth, selectedYear]);
-
   const filteredStudents = useMemo(() => students.filter(s => s.classId === selectedClassId), [students, selectedClassId]);
 
   const reportData = useMemo(() => {
-    // Normalisasi fungsi pembanding status
     const matchStatus = (val: any, target: string) => {
       if (!val) return false;
       return String(val).toLowerCase().trim() === target.toLowerCase().trim();
@@ -68,18 +65,94 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
     }
   }, [reportType, filteredStudents, attendance, selectedDate, selectedMonth, selectedYear, daysInMonth]);
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    if (!selectedClassId) {
+      Swal.fire('Perhatian', 'Silakan pilih kelas terlebih dahulu.', 'warning');
+      return;
+    }
+    
+    // Pemicuan window.print() secara langsung untuk menghindari pemblokiran oleh browser modern
+    window.print();
+  };
+
+  const exportToExcel = () => {
+    if (!selectedClassId) {
+      Swal.fire('Perhatian', 'Silakan pilih kelas terlebih dahulu.', 'warning');
+      return;
+    }
+
+    try {
+      const SEP = ";";
+      let csvContent = "";
+      const fileName = `Laporan_Absensi_${selectedClass?.name || 'Kelas'}_${reportType === 'daily' ? selectedDate : months[selectedMonth-1] + '_' + selectedYear}.csv`;
+
+      if (reportType === 'daily') {
+        csvContent = `No${SEP}NIS${SEP}Nama Siswa${SEP}Status${SEP}Keterangan\n`;
+        reportData.forEach((row: any, idx) => {
+          csvContent += `${idx + 1}${SEP}${row.nis}${SEP}"${row.name}"${SEP}${row.status}${SEP}"${row.note || '-'}"\n`;
+        });
+      } else {
+        let header = `No${SEP}NIS${SEP}Nama Siswa${SEP}`;
+        for (let i = 1; i <= daysInMonth; i++) header += `${i}${SEP}`;
+        header += `H${SEP}S${SEP}I${SEP}A\n`;
+        csvContent = header;
+
+        reportData.forEach((row: any, idx) => {
+          let line = `${idx + 1}${SEP}${row.nis}${SEP}"${row.name}"${SEP}`;
+          for (let i = 1; i <= daysInMonth; i++) {
+            line += `${row.dailyStats[i] || ''}${SEP}`;
+          }
+          line += `${row.h}${SEP}${row.s}${SEP}${row.i}${SEP}${row.a}\n`;
+          csvContent += line;
+        });
+      }
+
+      const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: 'File Excel berhasil diunduh.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'Gagal mengekspor data.', 'error');
+    }
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 no-print">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 no-print">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Laporan & Rekap</h1>
           <p className="text-slate-500 font-medium">Cetak dan tinjau riwayat absensi.</p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={handlePrint} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold shadow-lg">
-            <Printer size={18} /> Print Ke PDF
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+          <button 
+            onClick={handlePrint} 
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-slate-900 text-white px-4 py-3 rounded-2xl font-bold shadow-lg transition-all active:scale-95 hover:bg-slate-800"
+          >
+            <Printer size={18} /> 
+            <span className="hidden sm:inline">Cetak / Simpan PDF</span>
+            <span className="sm:hidden text-xs">Print</span>
+          </button>
+          <button 
+            onClick={exportToExcel} 
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-2xl font-bold shadow-lg transition-all active:scale-95 hover:bg-emerald-700"
+          >
+            <FileSpreadsheet size={18} /> 
+            <span className="hidden sm:inline">Excel</span>
+            <span className="sm:hidden text-xs">Excel</span>
           </button>
         </div>
       </div>
@@ -87,35 +160,36 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
       <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8 no-print">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Tipe</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Tipe Laporan</label>
             <div className="flex bg-slate-100 p-1 rounded-xl">
               <button onClick={() => setReportType('daily')} className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${reportType === 'daily' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Harian</button>
               <button onClick={() => setReportType('monthly')} className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${reportType === 'monthly' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Bulanan</button>
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Kelas</label>
-            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Pilih Kelas</label>
+            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">-- Pilih Kelas --</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           {reportType === 'daily' ? (
             <div className="md:col-span-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Tanggal</label>
-              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700" />
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           ) : (
             <>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Bulan</label>
-                <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700">
+                <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
                   {months.map((m, idx) => <option key={m} value={idx + 1}>{m}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Tahun</label>
-                <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700">
-                  {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+                  {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
             </>
@@ -123,10 +197,10 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
         </div>
       </div>
 
-      <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 overflow-x-auto print:shadow-none print:border-0 print:p-0">
+      <div className="bg-white p-8 md:p-12 rounded-[48px] shadow-sm border border-slate-100 overflow-visible print:shadow-none print:border-0 print:p-0 container-print">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">LAPORAN ABSENSI DIGITAL SISWA TK</h2>
-          <p className="text-slate-600 font-bold uppercase mt-1">KELAS: {classes.find(c => c.id === selectedClassId)?.name || '-'}</p>
+          <p className="text-slate-600 font-bold uppercase mt-1">KELAS: {selectedClass?.name || '-'}</p>
           <p className="text-slate-400 text-sm font-bold">
             {reportType === 'daily' ? `Tanggal: ${selectedDate}` : `Periode: ${months[selectedMonth - 1]} ${selectedYear}`}
           </p>
@@ -134,8 +208,8 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
 
         {reportType === 'daily' ? (
           <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-50">
+            <thead className="bg-slate-50">
+              <tr>
                 <th className="border-2 border-slate-200 px-4 py-3 text-center font-black text-slate-700 text-xs uppercase">No</th>
                 <th className="border-2 border-slate-200 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">NIS</th>
                 <th className="border-2 border-slate-200 px-4 py-3 text-left font-black text-slate-700 text-xs uppercase">Nama Siswa</th>
@@ -165,7 +239,7 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
             </tbody>
           </table>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto print:overflow-visible">
             <table className="w-full border-collapse text-[10px]">
               <thead>
                 <tr className="bg-slate-100">
@@ -207,25 +281,28 @@ const ReportManager: React.FC<ReportManagerProps> = ({ classes, students, attend
           </div>
         )}
 
-        <div className="mt-16 grid grid-cols-2 gap-12 text-center">
-          <div>
-            <p className="text-sm font-black text-slate-800 mb-24">Mengetahui,<br/>Kepala Sekolah</p>
-            <p className="font-black border-b-2 border-slate-900 inline-block px-12 pb-1 text-slate-900">( __________________________ )</p>
-            <p className="text-[10px] text-slate-500 mt-2 font-bold">NIP. ........................................</p>
+        <div className="mt-20 grid grid-cols-2 gap-12 text-center signature-block">
+          <div className="flex flex-col items-center">
+            <div className="text-sm font-bold text-slate-800 mb-24 space-y-1">
+              <p>Mengetahui</p>
+              <p>Kepala Sekolah TK</p>
+            </div>
+            <div className="text-sm font-bold text-slate-800 space-y-1">
+              <p className="mt-2">{selectedClass?.headmasterName || '........................................'}</p>
+              <p>Nip. ........................................</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-black text-slate-800 mb-24">Kediri, {now.toLocaleDateString('id-ID')}<br/>Wali Kelas</p>
-            <p className="font-black border-b-2 border-slate-900 inline-block px-12 pb-1 text-slate-900">( __________________________ )</p>
-            <p className="text-[10px] text-slate-500 mt-2 font-bold">NIP. ........................................</p>
+          <div className="flex flex-col items-center">
+            <div className="text-sm font-bold text-slate-800 mb-24 space-y-1">
+              <p>Ngariboyo, {reportType === 'daily' ? selectedDate : `${daysInMonth} ${months[selectedMonth-1]} ${selectedYear}`}</p>
+              <p>Guru Kelas {selectedClass?.name || '-'}</p>
+            </div>
+            <div className="text-sm font-bold text-slate-800 space-y-1">
+              <p className="mt-2">{selectedClass?.teacherName || '........................................'}</p>
+              <p>Nip. ........................................</p>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="mt-10 flex justify-center no-print">
-        <button className="flex items-center gap-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-10 py-5 rounded-full font-black shadow-2xl shadow-indigo-100 hover:scale-105 transition-all active:scale-95">
-          <Sparkles size={24} />
-          Minta Analisis Cerdas (AI Gemini)
-        </button>
       </div>
     </div>
   );

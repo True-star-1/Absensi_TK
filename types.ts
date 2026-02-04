@@ -9,6 +9,8 @@ export enum AttendanceStatus {
 export interface ClassRoom {
   id: string;
   name: string;
+  teacherName?: string;
+  headmasterName?: string;
 }
 
 export interface Student {
